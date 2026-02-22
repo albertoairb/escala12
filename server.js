@@ -10,7 +10,8 @@ const PORT = Number(process.env.PORT || 8080);
 const LOCK_FRIDAY_HOUR = Number(process.env.LOCK_FRIDAY_HOUR || 10);
 const ADMIN_KEY = (process.env.ADMIN_KEY || "").trim();
 
-const DATA_FILE = path.join(__dirname, "data", "escala.json");
+const DATA_DIR = path.join(__dirname, "data");
+const DATA_FILE = path.join(DATA_DIR, "escala.json");
 const PUBLIC_DIR = path.join(__dirname, "public");
 
 app.use(express.json({ limit: "1mb" }));
@@ -20,12 +21,114 @@ function nowISO() {
   return new Date().toISOString();
 }
 
+function todayISODate() {
+  // YYYY-MM-DD (timezone local do container)
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/**
+ * Estado seed (base) — usado somente se /data/escala.json não existir ainda.
+ * Observação: ao rodar no Railway com Volume montado em /app/data, esse seed
+ * garante que o sistema abre mesmo com o volume vazio.
+ */
+const DEFAULT_STATE = {
+  meta: {
+    title: "Escala de Oficiais (23/02 a 01/03)",
+    author: "Desenvolvido por Alberto Franzini Neto",
+    created_at: "2026-02-22"
+  },
+  period: {
+    start: "2026-02-23",
+    end: "2026-03-01"
+  },
+  dates: [
+    "2026-02-23",
+    "2026-02-24",
+    "2026-02-25",
+    "2026-02-26",
+    "2026-02-27",
+    "2026-02-28",
+    "2026-03-01"
+  ],
+  codes: [
+    "EXP",
+    "SR",
+    "FO",
+    "MA",
+    "VE",
+    "F",
+    "LP",
+    "CFP_DIA",
+    "CFP_NOITE",
+    "12H",
+    "12X36",
+    "PF"
+  ],
+  legend: {
+    EXP: "expediente",
+    SR: "supervisor regional",
+    FO: "folga",
+    MA: "meio expediente matutino",
+    VE: "meio expediente vespertino",
+    F: "férias",
+    LP: "licença/afastamento",
+    CFP_DIA: "cfp dia",
+    CFP_NOITE: "cfp noite",
+    "12H": "serviço 12h",
+    "12X36": "12x36",
+    PF: "ponto facultativo"
+  },
+  officers: [
+    { id: "o1", posto: "Ten Cel PM", nome: "NOME 01" },
+    { id: "o2", posto: "Maj PM", nome: "NOME 02" },
+    { id: "o3", posto: "Cap PM", nome: "NOME 03" }
+  ],
+  assignments: {},
+  history: [],
+  signatures: {
+    chefe_p1: {
+      nome: "Cap PM Alberto Franzini Neto",
+      assinado_em: ""
+    },
+    subcomandante: {
+      nome: "Maj PM Mozna",
+      ciente_em: ""
+    }
+  }
+};
+
+function ensureStateFile() {
+  // garante pasta /data
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+
+  // se ainda não existe o arquivo, cria com seed
+  if (!fs.existsSync(DATA_FILE)) {
+    const seeded = JSON.parse(JSON.stringify(DEFAULT_STATE));
+
+    // atualiza created_at para hoje (sem alterar period/dates)
+    seeded.meta = seeded.meta || {};
+    seeded.meta.created_at = todayISODate();
+
+    // permite sobrescrever título/autor via env
+    if (process.env.TITLE) seeded.meta.title = process.env.TITLE;
+    if (process.env.AUTHOR) seeded.meta.author = process.env.AUTHOR;
+
+    fs.writeFileSync(DATA_FILE, JSON.stringify(seeded, null, 2), "utf-8");
+  }
+}
+
 function readState() {
+  ensureStateFile();
   const raw = fs.readFileSync(DATA_FILE, "utf-8");
   return JSON.parse(raw);
 }
 
 function writeState(state) {
+  ensureStateFile();
   const tmp = DATA_FILE + ".tmp";
   fs.writeFileSync(tmp, JSON.stringify(state, null, 2), "utf-8");
   fs.renameSync(tmp, DATA_FILE);
@@ -49,12 +152,6 @@ function adminBypass(req) {
   if (!ADMIN_KEY) return false;
   const key = (req.headers["x-admin-key"] || "").toString().trim();
   return key && key === ADMIN_KEY;
-}
-
-function majorBypass(req) {
-  if (!MAJOR_KEY) return false;
-  const key = (req.headers["x-major-key"] || "").toString().trim();
-  return key && key === MAJOR_KEY;
 }
 
 function mustText(v) {
@@ -83,21 +180,11 @@ app.get("/api/health", (_req, res) => {
 app.get("/api/state", (_req, res) => {
   try {
     const state = readState();
+
     // atualiza metadados dinâmicos (opcional)
     state.meta = state.meta || {};
     if (process.env.TITLE) state.meta.title = process.env.TITLE;
     if (process.env.AUTHOR) state.meta.author = process.env.AUTHOR;
-
-    // assinaturas (fixas por env)
-    state.signatures = state.signatures || {};
-    state.signatures.chefe_p1 = state.signatures.chefe_p1 || {};
-    state.signatures.chefe_p1.name = CHEFE_P1_NOME;
-    state.signatures.chefe_p1.role = state.signatures.chefe_p1.role || "Chefe P/1";
-    state.signatures.subcomandante = state.signatures.subcomandante || {};
-    state.signatures.subcomandante.name = SUBCOMANDANTE_NOME;
-    state.signatures.subcomandante.role = state.signatures.subcomandante.role || "Subcomandante";
-    state.signatures.ciente = state.signatures.ciente || { ok: false, at: "", by: "" };
-
 
     res.json({ ok: true, state, locked: isLockedNow() });
   } catch (e) {
@@ -195,48 +282,8 @@ app.post("/api/update", (req, res) => {
   }
 });
 
-
-/**
- * marca "ciente" do Subcomandante (somente leitura; não altera escala)
- * header: x-major-key
- * body opcional: { note: "..." }
- */
-app.post("/api/ciente", (req, res) => {
-  try {
-    if (!majorBypass(req) && !adminBypass(req)) {
-      return res.status(403).json({ ok: false, error: "negado", details: "chave inválida para ciente" });
-    }
-
-    const state = readState();
-    state.signatures = state.signatures || {};
-    state.signatures.chefe_p1 = state.signatures.chefe_p1 || { role: "Chefe P/1" };
-    state.signatures.chefe_p1.name = CHEFE_P1_NOME;
-
-    state.signatures.subcomandante = state.signatures.subcomandante || { role: "Subcomandante" };
-    state.signatures.subcomandante.name = SUBCOMANDANTE_NOME;
-
-    state.signatures.ciente = state.signatures.ciente || { ok: false, at: "", by: "" };
-    state.signatures.ciente.ok = true;
-    state.signatures.ciente.at = nowISO();
-    state.signatures.ciente.by = SUBCOMANDANTE_NOME;
-
-    state.audit = Array.isArray(state.audit) ? state.audit : [];
-    state.audit.unshift({
-      at: nowISO(),
-      action: "CIENTE_SUBCOMANDANTE",
-      by: SUBCOMANDANTE_NOME,
-      note: mustText((req.body || {}).note)
-    });
-    if (state.audit.length > 1000) state.audit = state.audit.slice(0, 1000);
-
-    writeState(state);
-    res.json({ ok: true, ciente: state.signatures.ciente, locked: isLockedNow() });
-  } catch (e) {
-    res.status(500).json({ ok: false, error: "falha_ciente", details: e.message });
-  }
-});
-
-
 app.listen(PORT, () => {
+  // cria o arquivo já na subida (útil para volume vazio)
+  try { ensureStateFile(); } catch (_e) {}
   console.log(`[OK] Escala rodando na porta interna ${PORT} (TZ=${process.env.TZ})`);
 });
