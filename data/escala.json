@@ -1,0 +1,82 @@
+{
+  "meta": {
+    "title": "Escala de Oficiais (23/02 a 01/03)",
+    "author": "Desenvolvido por Alberto Franzini Neto",
+    "created_at": "2026-02-22"
+  },
+  "period": {
+    "start": "2026-02-23",
+    "end": "2026-03-01"
+  },
+  "dates": [
+    "2026-02-23",
+    "2026-02-24",
+    "2026-02-25",
+    "2026-02-26",
+    "2026-02-27",
+    "2026-02-28",
+    "2026-03-01"
+  ],
+  "codes": [
+    "EXP",
+    "SR",
+    "FO",
+    "MA",
+    "VE",
+    "F",
+    "LP",
+    "CFP_DIA",
+    "CFP_NOITE",
+    "12H",
+    "12X36",
+    "PF"
+  ],
+  "codes_help": {
+    "EXP": "expediente",
+    "SR": "supervisor regional",
+    "FO": "folga",
+    "MA": "meio expediente matutino",
+    "VE": "meio expediente vespertino",
+    "F": "férias",
+    "LP": "licença/afastamento",
+    "CFP_DIA": "cfp dia",
+    "CFP_NOITE": "cfp noite",
+    "12H": "serviço 12h",
+    "12X36": "12x36",
+    "PF": "ponto facultativo"
+  },
+  "officers": [
+    {
+      "id": "o1",
+      "rank": "Ten Cel PM",
+      "name": "NOME 01"
+    },
+    {
+      "id": "o2",
+      "rank": "Maj PM",
+      "name": "NOME 02"
+    },
+    {
+      "id": "o3",
+      "rank": "Cap PM",
+      "name": "NOME 03"
+    }
+  ],
+  "assignments": {},
+  "history": [],
+  "signatures": {
+    "chefe_p1": {
+      "name": "Cap PM Alberto Franzini Neto",
+      "role": "Chefe P/1"
+    },
+    "subcomandante": {
+      "name": "Maj PM Mozna",
+      "role": "Subcomandante"
+    },
+    "ciente": {
+      "ok": false,
+      "at": "",
+      "by": ""
+    }
+  }
+}

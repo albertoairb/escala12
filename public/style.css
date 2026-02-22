@@ -1,0 +1,43 @@
+:root { font-family: Arial, Helvetica, sans-serif; }
+body { margin: 0; background: #f6f7f9; color: #111; }
+.top {
+  display: flex; gap: 16px; justify-content: space-between; align-items: center;
+  padding: 16px; background: #fff; border-bottom: 1px solid #e6e6e6;
+}
+h1 { margin: 0; font-size: 18px; }
+.sub { margin-top: 4px; color: #444; font-size: 13px; }
+.status { margin-top: 6px; font-size: 13px; }
+.actions button { margin-left: 8px; }
+.wrap { max-width: 1200px; margin: 0 auto; padding: 16px; }
+.panel { background: #fff; border: 1px solid #e6e6e6; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+.panel h2 { margin: 0 0 10px 0; font-size: 15px; }
+.formgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+label { font-size: 13px; display: grid; gap: 6px; }
+input { padding: 10px; border: 1px solid #d8d8d8; border-radius: 8px; }
+.hint { font-size: 12px; color: #444; margin-top: 8px; }
+.tablewrap { overflow: auto; border: 1px solid #eee; border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; min-width: 900px; }
+th, td { border-bottom: 1px solid #eee; padding: 8px; text-align: left; font-size: 13px; }
+th { position: sticky; top: 0; background: #fafafa; z-index: 1; }
+select { padding: 6px; border-radius: 8px; border: 1px solid #d8d8d8; }
+.changed { outline: 2px solid #ffcc00; outline-offset: -2px; background: #fffbe6; }
+.savebar { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+button { padding: 10px 12px; border: 1px solid #d8d8d8; background: #fff; border-radius: 10px; cursor: pointer; }
+button.primary { border-color: #222; }
+.msg { font-size: 13px; color: #333; }
+.legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; font-size: 13px; }
+.legend div { padding: 10px; border: 1px solid #eee; border-radius: 10px; background: #fafafa; }
+.history { font-size: 13px; display: grid; gap: 8px; }
+.histitem { border: 1px solid #eee; border-radius: 10px; padding: 10px; background: #fafafa; }
+.foot { color: #444; font-size: 12px; text-align: center; padding: 10px 0; }
+
+
+/* assinaturas */
+.signbox { padding: 6px 2px; }
+.signrow { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.sig { border: 1px solid #e5e5e5; border-radius: 12px; padding: 14px; background: #fff; }
+.sigline { height: 1px; background: #222; opacity: 0.7; margin: 24px 0 8px; }
+.siglabel { font-size: 12px; opacity: 0.75; }
+.signame { margin-top: 6px; }
+.sigciente { margin-top: 10px; font-size: 12px; opacity: 0.85; }
+@media (max-width: 900px) { .signrow { grid-template-columns: 1fr; } }

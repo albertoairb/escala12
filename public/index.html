@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Escala</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1 id="title">Escala</h1>
+      <div class="sub" id="subtitle"></div>
+      <div class="status" id="lockStatus"></div>
+    </div>
+    <div class="actions">
+      <button id="btnReload">recarregar</button>
+      <button id="btnExport">exportar (json)</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="panel">
+      <h2>alterar escala</h2>
+
+      <div class="formgrid">
+        <label>
+          quem alterou
+          <input id="user" placeholder="ex.: Cap PM Fulano" />
+        </label>
+
+        <label>
+          motivo da alteração
+          <input id="reason" placeholder="ex.: troca de serviço / ajuste operacional" />
+        </label>
+      </div>
+
+      <div class="hint">
+        toda alteração exige preenchimento de <b>quem</b> e <b>motivo</b>. o histórico é permanente.
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>escala (segunda a domingo)</h2>
+      <div class="tablewrap">
+        <table id="table"></table>
+      </div>
+
+      <div class="savebar">
+        <button id="btnSave" class="primary">salvar alterações</button>
+        <div id="saveMsg" class="msg"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>legenda</h2>
+      <div id="legend" class="legend"></div>
+    </section>
+
+
+    <section class="panel">
+      <h2>assinaturas</h2>
+      <div id="signBox" class="signbox"></div>
+      <div class="savebar">
+        <button id="btnCiente" class="primary">dar ciente (subcomandante)</button>
+        <div id="cienteMsg" class="msg"></div>
+      </div>
+      <div class="hint">
+        o subcomandante apenas registra o <b>ciente</b>. não altera a escala.
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>histórico (não apaga)</h2>
+      <div id="history" class="history"></div>
+    </section>
+
+    <footer class="foot" id="author"></footer>
+  </main>
+
+  <script src="./script.js"></script>
+</body>
+</html>

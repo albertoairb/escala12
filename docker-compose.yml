@@ -1,0 +1,11 @@
+services:
+  escala:
+    build: .
+    container_name: escala_oficiais
+    env_file:
+      - .env
+    ports:
+      - "${PUBLIC_PORT:-8088}:${PORT:-8080}"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
