@@ -22,7 +22,6 @@ function nowISO() {
 }
 
 function todayISODate() {
-  // YYYY-MM-DD (timezone local do container)
   const d = new Date();
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -31,19 +30,20 @@ function todayISODate() {
 }
 
 /**
- * Estado seed (base) — usado somente se /data/escala.json não existir ainda.
- * Observação: ao rodar no Railway com Volume montado em /app/data, esse seed
- * garante que o sistema abre mesmo com o volume vazio.
+ * Estado seed compatível com o frontend ORIGINAL do escala12:
+ * - officers: [{id, rank, name}]
+ * - assignments: {}
+ * - history: []
  */
 const DEFAULT_STATE = {
   meta: {
     title: "Escala de Oficiais (23/02 a 01/03)",
     author: "Desenvolvido por Alberto Franzini Neto",
-    created_at: "2026-02-22"
+    created_at: "2026-02-22",
   },
   period: {
     start: "2026-02-23",
-    end: "2026-03-01"
+    end: "2026-03-01",
   },
   dates: [
     "2026-02-23",
@@ -52,23 +52,11 @@ const DEFAULT_STATE = {
     "2026-02-26",
     "2026-02-27",
     "2026-02-28",
-    "2026-03-01"
+    "2026-03-01",
   ],
-  codes: [
-    "EXP",
-    "SR",
-    "FO",
-    "MA",
-    "VE",
-    "F",
-    "LP",
-    "CFP_DIA",
-    "CFP_NOITE",
-    "12H",
-    "12X36",
-    "PF"
-  ],
-  legend: {
+  codes: ["EXP", "SR", "FO", "MA", "VE", "F", "LP", "CFP_DIA", "CFP_NOITE", "12H", "12X36", "PF"],
+  // o frontend usa codes_help (no zip original)
+  codes_help: {
     EXP: "expediente",
     SR: "supervisor regional",
     FO: "folga",
@@ -80,51 +68,94 @@ const DEFAULT_STATE = {
     CFP_NOITE: "cfp noite",
     "12H": "serviço 12h",
     "12X36": "12x36",
-    PF: "ponto facultativo"
+    PF: "ponto facultativo",
   },
   officers: [
-    { id: "o1", posto: "Ten Cel PM", nome: "NOME 01" },
-    { id: "o2", posto: "Maj PM", nome: "NOME 02" },
-    { id: "o3", posto: "Cap PM", nome: "NOME 03" }
+    { id: "o1", rank: "Ten Cel PM", name: "NOME 01" },
+    { id: "o2", rank: "Maj PM", name: "NOME 02" },
+    { id: "o3", rank: "Cap PM", name: "NOME 03" },
   ],
   assignments: {},
   history: [],
-  signatures: {
-    chefe_p1: {
-      nome: "Cap PM Alberto Franzini Neto",
-      assinado_em: ""
-    },
-    subcomandante: {
-      nome: "Maj PM Mozna",
-      ciente_em: ""
-    }
-  }
 };
 
 function ensureStateFile() {
-  // garante pasta /data
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
-  // se ainda não existe o arquivo, cria com seed
   if (!fs.existsSync(DATA_FILE)) {
     const seeded = JSON.parse(JSON.stringify(DEFAULT_STATE));
-
-    // atualiza created_at para hoje (sem alterar period/dates)
     seeded.meta = seeded.meta || {};
     seeded.meta.created_at = todayISODate();
-
-    // permite sobrescrever título/autor via env
     if (process.env.TITLE) seeded.meta.title = process.env.TITLE;
     if (process.env.AUTHOR) seeded.meta.author = process.env.AUTHOR;
-
     fs.writeFileSync(DATA_FILE, JSON.stringify(seeded, null, 2), "utf-8");
   }
+}
+
+/**
+ * Migra estados antigos/inconsistentes para o formato esperado pelo frontend:
+ * - officers: posto/nome -> rank/name
+ * - atribuições -> assignments
+ * - história -> history
+ * - legend -> codes_help (se necessário)
+ */
+function normalizeState(state) {
+  if (!state || typeof state !== "object") return state;
+
+  // meta defaults
+  state.meta = state.meta || {};
+  if (!state.meta.created_at) state.meta.created_at = todayISODate();
+  if (process.env.TITLE) state.meta.title = process.env.TITLE;
+  if (process.env.AUTHOR) state.meta.author = process.env.AUTHOR;
+
+  // officers: aceitar tanto rank/name quanto posto/nome
+  if (Array.isArray(state.officers)) {
+    state.officers = state.officers.map((o) => ({
+      id: (o && o.id) ? String(o.id) : "",
+      rank: (o && (o.rank || o.posto || o.patente)) ? String(o.rank || o.posto || o.patente) : "",
+      name: (o && (o.name || o.nome)) ? String(o.name || o.nome) : "",
+    })).filter(o => o.id && o.rank && o.name);
+  } else {
+    state.officers = [];
+  }
+
+  // assignments/history: aceitar chaves com acento
+  if (!state.assignments) {
+    state.assignments = state["atribuições"] || state["atribuicoes"] || {};
+  }
+  if (!state.history) {
+    state.history = state["história"] || state["historia"] || [];
+  }
+
+  // garantir tipos
+  if (typeof state.assignments !== "object" || state.assignments === null || Array.isArray(state.assignments)) {
+    state.assignments = {};
+  }
+  if (!Array.isArray(state.history)) state.history = [];
+
+  // codes_help: se veio "legend", copiar
+  if (!state.codes_help && state.legend && typeof state.legend === "object") {
+    state.codes_help = state.legend;
+  }
+  if (!state.codes_help) state.codes_help = DEFAULT_STATE.codes_help;
+
+  return state;
 }
 
 function readState() {
   ensureStateFile();
   const raw = fs.readFileSync(DATA_FILE, "utf-8");
-  return JSON.parse(raw);
+  const parsed = JSON.parse(raw);
+  const norm = normalizeState(parsed);
+
+  // se normalizou algo, salva de volta para fixar no volume
+  try {
+    const before = JSON.stringify(parsed);
+    const after = JSON.stringify(norm);
+    if (before !== after) writeState(norm);
+  } catch (_) {}
+
+  return norm;
 }
 
 function writeState(state) {
@@ -135,17 +166,15 @@ function writeState(state) {
 }
 
 /**
- * trava: sexta >= 10:00 até domingo 00:00
- * getDay(): 0=domingo, 5=sexta, 6=sábado
+ * trava: sexta >= LOCK_FRIDAY_HOUR até domingo (sábado todo)
  */
 function isLockedNow() {
   const d = new Date();
-  const day = d.getDay();
+  const day = d.getDay(); // 0 dom, 5 sex, 6 sab
   const hour = d.getHours();
-
-  if (day === 5 && hour >= LOCK_FRIDAY_HOUR) return true; // sexta após 10h
-  if (day === 6) return true; // sábado todo
-  return false; // domingo em diante libera
+  if (day === 5 && hour >= LOCK_FRIDAY_HOUR) return true;
+  if (day === 6) return true;
+  return false;
 }
 
 function adminBypass(req) {
@@ -161,10 +190,8 @@ function mustText(v) {
 function requiredUserReason(body) {
   const user = mustText(body.user);
   const reason = mustText(body.reason);
-
   if (!user) return { ok: false, error: "campo_obrigatorio", details: "informe quem alterou" };
   if (!reason) return { ok: false, error: "campo_obrigatorio", details: "informe o motivo da alteração" };
-
   return { ok: true, user, reason };
 }
 
@@ -173,31 +200,19 @@ app.get("/api/health", (_req, res) => {
     ok: true,
     service: "escala-oficiais",
     time: nowISO(),
-    locked: isLockedNow()
+    locked: isLockedNow(),
   });
 });
 
 app.get("/api/state", (_req, res) => {
   try {
     const state = readState();
-
-    // atualiza metadados dinâmicos (opcional)
-    state.meta = state.meta || {};
-    if (process.env.TITLE) state.meta.title = process.env.TITLE;
-    if (process.env.AUTHOR) state.meta.author = process.env.AUTHOR;
-
     res.json({ ok: true, state, locked: isLockedNow() });
   } catch (e) {
     res.status(500).json({ ok: false, error: "falha_leitura", details: e.message });
   }
 });
 
-/**
- * body:
- *  - user: string
- *  - reason: string
- *  - updates: [{ officerId, date, code }]
- */
 app.post("/api/update", (req, res) => {
   try {
     if (isLockedNow() && !adminBypass(req)) {
@@ -213,14 +228,9 @@ app.post("/api/update", (req, res) => {
     }
 
     const state = readState();
-    const codes = state.codes || [];
-    const valid = new Set(codes);
-
-    const dates = state.dates || [];
-    const validDates = new Set(dates);
-
-    // index officers
-    const byId = new Map((state.officers || []).map(o => [o.id, o]));
+    const validCodes = new Set(state.codes || []);
+    const validDates = new Set(state.dates || []);
+    const byId = new Map((state.officers || []).map((o) => [o.id, o]));
 
     const changes = [];
     for (const u of updates) {
@@ -228,38 +238,23 @@ app.post("/api/update", (req, res) => {
       const date = mustText(u.date);
       const code = mustText(u.code);
 
-      if (!byId.has(officerId)) {
-        return res.status(400).json({ ok: false, error: "oficial_invalido", details: `id inválido: ${officerId}` });
-      }
-      if (!validDates.has(date)) {
-        return res.status(400).json({ ok: false, error: "data_invalida", details: `data inválida: ${date}` });
-      }
-      if (!valid.has(code) && code !== "") {
-        return res.status(400).json({ ok: false, error: "codigo_invalido", details: `código inválido: ${code}` });
-      }
+      if (!byId.has(officerId)) return res.status(400).json({ ok: false, error: "oficial_invalido", details: `id inválido: ${officerId}` });
+      if (!validDates.has(date)) return res.status(400).json({ ok: false, error: "data_invalida", details: `data inválida: ${date}` });
+      if (!validCodes.has(code) && code !== "") return res.status(400).json({ ok: false, error: "codigo_invalido", details: `código inválido: ${code}` });
 
       const key = `${officerId}|${date}`;
-      const oldCode = (state.assignments && state.assignments[key]) ? state.assignments[key] : "";
+      const oldCode = state.assignments[key] || "";
       if (oldCode === code) continue;
 
       changes.push({ officerId, date, oldCode, newCode: code });
     }
 
-    if (!changes.length) {
-      return res.json({ ok: true, message: "nenhuma mudança efetiva", locked: isLockedNow() });
-    }
-
-    state.assignments = state.assignments || {};
-    state.history = state.history || [];
+    if (!changes.length) return res.json({ ok: true, message: "nenhuma mudança efetiva", locked: isLockedNow() });
 
     for (const c of changes) {
       const k = `${c.officerId}|${c.date}`;
-      // permite limpar com "" (voltar para "-")
-      if (c.newCode === "") {
-        delete state.assignments[k];
-      } else {
-        state.assignments[k] = c.newCode;
-      }
+      if (c.newCode === "") delete state.assignments[k];
+      else state.assignments[k] = c.newCode;
 
       state.history.unshift({
         at: nowISO(),
@@ -268,11 +263,10 @@ app.post("/api/update", (req, res) => {
         officerId: c.officerId,
         date: c.date,
         from: c.oldCode || "",
-        to: c.newCode || ""
+        to: c.newCode || "",
       });
     }
 
-    // limita histórico para não crescer infinito
     if (state.history.length > 2000) state.history = state.history.slice(0, 2000);
 
     writeState(state);
@@ -283,7 +277,6 @@ app.post("/api/update", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  // cria o arquivo já na subida (útil para volume vazio)
-  try { ensureStateFile(); } catch (_e) {}
+  try { ensureStateFile(); } catch (_) {}
   console.log(`[OK] Escala rodando na porta interna ${PORT} (TZ=${process.env.TZ})`);
 });
