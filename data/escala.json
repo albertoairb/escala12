@@ -1,82 +1,122 @@
 {
-  "meta": {
-    "title": "Escala de Oficiais (23/02 a 01/03)",
-    "author": "Desenvolvido por Alberto Franzini Neto",
-    "created_at": "2026-02-22"
-  },
-  "period": {
-    "start": "2026-02-23",
-    "end": "2026-03-01"
-  },
-  "dates": [
-    "2026-02-23",
-    "2026-02-24",
-    "2026-02-25",
-    "2026-02-26",
-    "2026-02-27",
-    "2026-02-28",
-    "2026-03-01"
-  ],
-  "codes": [
-    "EXP",
-    "SR",
-    "FO",
-    "MA",
-    "VE",
-    "F",
-    "LP",
-    "CFP_DIA",
-    "CFP_NOITE",
-    "12H",
-    "12X36",
-    "PF"
-  ],
-  "codes_help": {
-    "EXP": "expediente",
-    "SR": "supervisor regional",
-    "FO": "folga",
-    "MA": "meio expediente matutino",
-    "VE": "meio expediente vespertino",
-    "F": "férias",
-    "LP": "licença/afastamento",
-    "CFP_DIA": "cfp dia",
-    "CFP_NOITE": "cfp noite",
-    "12H": "serviço 12h",
-    "12X36": "12x36",
-    "PF": "ponto facultativo"
-  },
-  "officers": [
-    {
-      "id": "o1",
-      "rank": "Ten Cel PM",
-      "name": "NOME 01"
+  "comando": {
+    "cmt": {
+      "posto": "TEN CEL PM",
+      "re": "930633-1",
+      "nome": "HELDER ANTONIO DE PAULA"
     },
-    {
-      "id": "o2",
-      "rank": "Maj PM",
-      "name": "NOME 02"
+    "subcmt": {
+      "posto": "MAJ PM",
+      "re": "980895-7",
+      "nome": "EDUARDO MOSNA XAVIER"
     },
-    {
-      "id": "o3",
-      "rank": "Cap PM",
-      "name": "NOME 03"
+    "coord_op": {
+      "posto": "MAJ PM",
+      "re": "980982-1",
+      "nome": "ALESSANDRA PAULA TONOLLI"
+    },
+    "ch_p3_cmt_cia_ft": {
+      "posto": "CAP PM",
+      "re": "108437-2",
+      "nome": "CARLOS BORDIM NETO"
+    },
+    "ch_p1_p5": {
+      "posto": "CAP PM",
+      "re": "121919-7",
+      "nome": "ALBERTO FRANZINI NETO"
+    },
+    "ch_pimed": {
+      "posto": "CAP PM",
+      "re": "117541-6",
+      "nome": "MARCIO SAITO SASSAKI"
+    },
+    "ch_p2": {
+      "posto": "1º TEN PM",
+      "re": "170137-1",
+      "nome": "DANIEL ALVARES DE SIQUEIRA"
+    },
+    "ch_p4": {
+      "posto": "1º TEN PM",
+      "re": "964249-8",
+      "nome": "MATEUS PEDRO TEODORO"
+    },
+    "ch_gabinete_odonto_1": {
+      "posto": "1º TEN DENT PM",
+      "re": "180160-A",
+      "nome": "FERNANDA BRUNO POMPONIO MARTIGNAGO"
+    },
+    "ch_gabinete_odonto_2": {
+      "posto": "1º TEN DENT PM",
+      "re": "232278-1",
+      "nome": "DAYANA DE OLIVEIRA SILVA ALMEIDA"
     }
-  ],
-  "assignments": {},
-  "history": [],
-  "signatures": {
-    "chefe_p1": {
-      "name": "Cap PM Alberto Franzini Neto",
-      "role": "Chefe P/1"
+  },
+  "cmt_cia": {
+    "1_cia": {
+      "posto": "CAP PM",
+      "re": "118104-1",
+      "nome": "ANDRE SARTARELLI DE PAULA"
     },
-    "subcomandante": {
-      "name": "Maj PM Mozna",
-      "role": "Subcomandante"
+    "2_cia": {
+      "posto": "CAP PM",
+      "re": "118339-7",
+      "nome": "VINICIO AUGUSTO VOLTARELLI TAVARES"
     },
-    "ciente": {
-      "ok": false,
-      "at": "",
-      "by": ""
+    "3_cia": {
+      "posto": "CAP PM",
+      "re": "118426-1",
+      "nome": "JOSE ANTONIO MARCIANO NETO"
     }
+  },
+  "operacional": {
+    "cfp": [
+      {
+        "posto": "1º TEN PM",
+        "re": "141767-3",
+        "nome": "IURI FELIPE DOS SANTOS"
+      },
+      {
+        "posto": "1º TEN PM",
+        "re": "140652-3",
+        "nome": "ANTÔNIO OVIDIO FERRUCIO CARDOSO"
+      },
+      {
+        "posto": "1º TEN PM",
+        "re": "142458-A",
+        "nome": "BRUNO ANTÃO DE OLIVEIRA"
+      },
+      {
+        "posto": "1º TEN PM",
+        "re": "152706-1",
+        "nome": "LARISSA AMADEU LEITE"
+      },
+      {
+        "posto": "1º TEN PM",
+        "re": "121790-3",
+        "nome": "RENATO FERNANDES FREIRE"
+      },
+      {
+        "posto": "2º / 1º TEN PM",
+        "re": "",
+        "nome": "VAGO"
+      },
+      {
+        "posto": "2º / 1º TEN PM",
+        "re": "",
+        "nome": "VAGO"
+      }
+    ],
+    "cft": [
+      {
+        "posto": "1º TEN PM",
+        "re": "147654-8",
+        "nome": "RAPHAEL MECCA SAMPAIO"
+      },
+      {
+        "posto": "2º / 1º TEN PM",
+        "re": "",
+        "nome": "VAGO"
+      }
+    ]
   }
 }
