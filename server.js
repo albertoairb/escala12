@@ -30,10 +30,11 @@ function todayISODate() {
 }
 
 /**
- * Estado seed compatível com o frontend ORIGINAL do escala12:
+ * Seed compatível com o frontend do escala12:
  * - officers: [{id, rank, name}]
  * - assignments: {}
  * - history: []
+ * - codes_help
  */
 const DEFAULT_STATE = {
   meta: {
@@ -41,10 +42,7 @@ const DEFAULT_STATE = {
     author: "Desenvolvido por Alberto Franzini Neto",
     created_at: "2026-02-22",
   },
-  period: {
-    start: "2026-02-23",
-    end: "2026-03-01",
-  },
+  period: { start: "2026-02-23", end: "2026-03-01" },
   dates: [
     "2026-02-23",
     "2026-02-24",
@@ -55,7 +53,6 @@ const DEFAULT_STATE = {
     "2026-03-01",
   ],
   codes: ["EXP", "SR", "FO", "MA", "VE", "F", "LP", "CFP_DIA", "CFP_NOITE", "12H", "12X36", "PF"],
-  // o frontend usa codes_help (no zip original)
   codes_help: {
     EXP: "expediente",
     SR: "supervisor regional",
@@ -77,6 +74,11 @@ const DEFAULT_STATE = {
   ],
   assignments: {},
   history: [],
+  // compat (se existir no frontend antigo)
+  signatures: {
+    chefe_p1: { nome: "Cap PM Alberto Franzini Neto", assinado_em: "" },
+    subcomandante: { nome: "Maj PM Mozna", ciente_em: "" },
+  },
 };
 
 function ensureStateFile() {
@@ -93,69 +95,75 @@ function ensureStateFile() {
 }
 
 /**
- * Migra estados antigos/inconsistentes para o formato esperado pelo frontend:
- * - officers: posto/nome -> rank/name
- * - atribuições -> assignments
- * - história -> history
- * - legend -> codes_help (se necessário)
+ * Normalização forte:
+ * - garante rank/name SEMPRE
+ * - também escreve posto/nome por compatibilidade (para não quebrar nada)
+ * - garante assignments/history e também espelha para atribuições/história
+ * - garante codes_help (copiando de legend, se vier)
  */
 function normalizeState(state) {
   if (!state || typeof state !== "object") return state;
 
-  // meta defaults
+  // meta
   state.meta = state.meta || {};
   if (!state.meta.created_at) state.meta.created_at = todayISODate();
   if (process.env.TITLE) state.meta.title = process.env.TITLE;
   if (process.env.AUTHOR) state.meta.author = process.env.AUTHOR;
 
-  // officers: aceitar tanto rank/name quanto posto/nome
-  if (Array.isArray(state.officers)) {
-    state.officers = state.officers.map((o) => ({
-      id: (o && o.id) ? String(o.id) : "",
-      rank: (o && (o.rank || o.posto || o.patente)) ? String(o.rank || o.posto || o.patente) : "",
-      name: (o && (o.name || o.nome)) ? String(o.name || o.nome) : "",
-    })).filter(o => o.id && o.rank && o.name);
-  } else {
-    state.officers = [];
-  }
-
-  // assignments/history: aceitar chaves com acento
-  if (!state.assignments) {
-    state.assignments = state["atribuições"] || state["atribuicoes"] || {};
-  }
-  if (!state.history) {
-    state.history = state["história"] || state["historia"] || [];
-  }
-
-  // garantir tipos
-  if (typeof state.assignments !== "object" || state.assignments === null || Array.isArray(state.assignments)) {
-    state.assignments = {};
-  }
-  if (!Array.isArray(state.history)) state.history = [];
-
-  // codes_help: se veio "legend", copiar
+  // codes_help
   if (!state.codes_help && state.legend && typeof state.legend === "object") {
     state.codes_help = state.legend;
   }
   if (!state.codes_help) state.codes_help = DEFAULT_STATE.codes_help;
 
+  // officers
+  const rawOfficers = Array.isArray(state.officers) ? state.officers : [];
+  const normOfficers = rawOfficers
+    .map((o) => {
+      const id = (o && o.id) ? String(o.id) : "";
+      const rank = (o && (o.rank || o.posto || o.patente)) ? String(o.rank || o.posto || o.patente) : "";
+      const name = (o && (o.name || o.nome)) ? String(o.name || o.nome) : "";
+      if (!id || !rank || !name) return null;
+
+      // IMPORTANTÍSSIMO:
+      // devolve SEMPRE name e rank, e também nome/posto por compatibilidade
+      return {
+        id,
+        rank,
+        name,
+        posto: rank,
+        nome: name,
+      };
+    })
+    .filter(Boolean);
+
+  state.officers = normOfficers;
+
+  // assignments/history (aceita chaves antigas)
+  let assignments = state.assignments;
+  if (!assignments) assignments = state["atribuições"] || state["atribuicoes"] || {};
+  if (typeof assignments !== "object" || assignments === null || Array.isArray(assignments)) assignments = {};
+
+  let history = state.history;
+  if (!history) history = state["história"] || state["historia"] || [];
+  if (!Array.isArray(history)) history = [];
+
+  // grava no formato esperado + espelho compat
+  state.assignments = assignments;
+  state.history = history;
+
+  state["atribuições"] = assignments;
+  state["história"] = history;
+
+  // legend compat (se o frontend usar)
+  if (!state.legend) state.legend = state.codes_help;
+
+  // garantir period/dates/codes pelo menos existam
+  if (!state.period) state.period = DEFAULT_STATE.period;
+  if (!Array.isArray(state.dates)) state.dates = DEFAULT_STATE.dates;
+  if (!Array.isArray(state.codes)) state.codes = DEFAULT_STATE.codes;
+
   return state;
-}
-
-function readState() {
-  ensureStateFile();
-  const raw = fs.readFileSync(DATA_FILE, "utf-8");
-  const parsed = JSON.parse(raw);
-  const norm = normalizeState(parsed);
-
-  // se normalizou algo, salva de volta para fixar no volume
-  try {
-    const before = JSON.stringify(parsed);
-    const after = JSON.stringify(norm);
-    if (before !== after) writeState(norm);
-  } catch (_) {}
-
-  return norm;
 }
 
 function writeState(state) {
@@ -165,8 +173,25 @@ function writeState(state) {
   fs.renameSync(tmp, DATA_FILE);
 }
 
+function readState() {
+  ensureStateFile();
+  const raw = fs.readFileSync(DATA_FILE, "utf-8");
+  const parsed = JSON.parse(raw);
+
+  const norm = normalizeState(parsed);
+
+  // se mudou, salva de volta (conserta o volume automaticamente)
+  try {
+    if (JSON.stringify(parsed) !== JSON.stringify(norm)) {
+      writeState(norm);
+    }
+  } catch (_) {}
+
+  return norm;
+}
+
 /**
- * trava: sexta >= LOCK_FRIDAY_HOUR até domingo (sábado todo)
+ * trava: sexta >= LOCK_FRIDAY_HOUR e sábado todo
  */
 function isLockedNow() {
   const d = new Date();
@@ -196,12 +221,7 @@ function requiredUserReason(body) {
 }
 
 app.get("/api/health", (_req, res) => {
-  res.json({
-    ok: true,
-    service: "escala-oficiais",
-    time: nowISO(),
-    locked: isLockedNow(),
-  });
+  res.json({ ok: true, service: "escala-oficiais", time: nowISO(), locked: isLockedNow() });
 });
 
 app.get("/api/state", (_req, res) => {
@@ -268,6 +288,10 @@ app.post("/api/update", (req, res) => {
     }
 
     if (state.history.length > 2000) state.history = state.history.slice(0, 2000);
+
+    // espelho compat
+    state["atribuições"] = state.assignments;
+    state["história"] = state.history;
 
     writeState(state);
     res.json({ ok: true, locked: isLockedNow() });
